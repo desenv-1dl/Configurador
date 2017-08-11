@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/plugins/Configurador/visualizacoes" >
+       <file>iconRegra.png</file> 
+  </qresource>
+</RCC>
