@@ -4,80 +4,89 @@ from qgis.core import QgsConditionalStyle, QgsMapLayerRegistry, QgsVectorLayer, 
 
 class GeradorDeRegras:
     def __init__(self, iface, bancoDeDados):
+        'Construtor'
         self.inicializarVariaveis()
         self.definirBancoDeDados(bancoDeDados)
         self.definirIface(iface)
 
     def inicializarVariaveis(self):
+        'Metodo para inicializar variaveis'
         self.iface = None
         self.bancoDeDados = None
         self.valoresDeRegra = None
-        self.estiloRegra = None
 
     def definirBancoDeDados(self, b):
+        'Metodo para registrar banco de dados'
         self.bancoDeDados = b
 
     def obterBancoDeDados(self):
+        'Metodo para obter banco de dados'
         return self.bancoDeDados
 
     def definirIface(self, i):
+        'Metodo para registrar o objeto iface do qgis'
         self.iface = i
 
     def obterIface(self):
+        'Metodo para obter o objeto iface do qgis'
         return self.iface
 
     def gerarRegras(self, tipo):
+        'Metodo que pega os dados da tabela layer_rules do banco de dados e cria uma estrutura de  dicionario de todas as regras'
         tabela = self.obterBancoDeDados().obterTabelaDeRegras(tipo)
-        regrasPorAtributo = {}
-        regrasPorLinha = {}
+        regras = { 'atributo' : {}, 'linha' : {}}
         for linha in tabela:
-            self.definirValoresDeRegra(linha)
-            self.definirEstiloDeRegra()
-            if (self.obterValoresDeRegras()['atributo']) and (not self.obterValoresDeRegras()['atributo'] in regrasPorAtributo.keys()):
-                regrasPorAtributo[ self.obterValoresDeRegras()['atributo'] ] = {
-                                                                                    self.obterValoresDeRegras()['camada'] : []
-                                                                               }
-            if not  self.obterValoresDeRegras()['camada'] in self.regras.keys():
-                regras[ self.obterValoresDeRegras()['camada'] ] = []
-            regras[ self.obterValoresDeRegras()['camada'] ].append( self.obterEstiloDeRegra() )
+            valoresDeRegra = self.organizarValoresDeRegra(linha)
+            regra = self.criarEstiloDeRegra(valoresDeRegra)
+            if(not valoresDeRegra['atributo']) and (not valoresDeRegra['camada'] in regras['linha'].keys()):
+                regras['linha'][valoresDeRegra['camada']] = [regra]
+            elif(not valoresDeRegra['atributo']) and (valoresDeRegra['camada'] in regras['linha'].keys()):
+                regras['linha'][valoresDeRegra['camada']].append(regra)
+            elif(valoresDeRegra['atributo']) and (not valoresDeRegra['camada'] in regras['atributo'].keys()):
+                regras['atributo'][valoresDeRegra['camada']] = {valoresDeRegra['atributo'] : [regra]}
+            elif(valoresDeRegra['camada'] in regras['atributo'].keys()) and (valoresDeRegra['atributo'] in regras['atributo'][valoresDeRegra['camada']].keys()):
+                regras['atributo'][valoresDeRegra['camada']][valoresDeRegra['atributo']].append(regra)
+            elif(valoresDeRegra['camada'] in regras['atributo'].keys()) and (not valoresDeRegra['atributo'] in regras['atributo'][valoresDeRegra['camada']].keys()):
+                regras['atributo'][valoresDeRegra['camada']] = {valoresDeRegra['atributo'] : [regra]}
         self.configurarRegrasEmCamadas(regras)
 
-    def definirValoresDeRegra(self, linha):
-        self.valoresDeRegra = {
+    def organizarValoresDeRegra(self, linha):
+        'Metodo que pega o linha da tabela layer_rules e a organiza em uma estrutura de dicionario'
+        valoresDeRegra = {
                                 'camada' : linha[0],
                                 'tipo_regra' : linha[1],
                                 'descricao' : linha[2],
                                 'corRgb' : [ int(linha[3].split(',')[0]), int(linha[3].split(',')[1]), int(linha[3].split(',')[2])],
-                                'regra' : linha[4]
-                                'atributo' : linha[5]
+                                'regra' : linha[4],
+                                'atributo' : linha[6]
                              }
+        return valoresDeRegra
 
-    def obterValoresDeRegra(self):
-        return self.valoresDeRegra
-
-    def definirEstiloDeRegra(self):
+    def criarEstiloDeRegra(self, valoresDeRegra):
+        'Metodo para criar regra'
         estilo = QgsConditionalStyle()
-        estilo.setName( self.obterValoresDeRegra()['descricao'] )
-        estilo.setRule( self.obterValoresDeRegra()['regra'] )
+        estilo.setName( valoresDeRegra['descricao'] )
+        estilo.setRule( valoresDeRegra['regra'] )
         estilo.setBackgroundColor(
                                     QtGui.QColor(
-                                           self.obterValoresDeRegra()['corRgb'][0],
-                                           self.obterValoresDeRegra()['corRgb'][1],
-                                           self.obterValoresDeRegra()['corRgb'][2]
+                                           valoresDeRegra['corRgb'][0],
+                                           valoresDeRegra['corRgb'][1],
+                                           valoresDeRegra['corRgb'][2]
                                           )
                                  )
-        self.estiloRegra = estilo
-
-    def obterEstiloDeRegra(self):
-        return self.estiloRegra
+        return estilo
 
     def configurarRegrasEmCamadas(self, regras):
-        camadas = QgsMapLayerRegistry.instance().mapLayersByName( self.obterValoresDeRegras()['camada'] )
-        for camada in camadas:
-            if self.obterValoresDeRegras()['tipo_regra'].lower() == 'atributo':
-                camada.conditionalStyles().setFieldStyles( self.obterValoresDeRegras()['atributo'], regras[ self.obterValoresDeRegras()['camada'] ] )
-            elif self.obterValoresDeRegras()['tipo_regra'].lower() == 'linha':
-                camada.conditionalStyles().setRowStyles( self.obterValoresDeRegras()['camada'] )
+        'Metodo para configurar todas as regras montadas nas camadas'
+        for tipo in regras:
+            for camadaNome in regras[tipo]:
+                camadasMap = QgsMapLayerRegistry.instance().mapLayersByName(camadaNome)
+                for camadaMap in camadasMap:
+                    if tipo == 'atributo':
+                        for atributo in regras[tipo][camadaNome]:
+                            camadaMap.conditionalStyles().setFieldStyles( atributo, regras[tipo][camadaNome][atributo] )
+                    else:
+                        camadaMap.conditionalStyles().setRowStyles( regras[tipo][camadaNome] )
 
 
 

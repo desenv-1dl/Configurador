@@ -104,6 +104,7 @@ class Frame(QtGui.QFrame, GUI):
             self.abrirGif()
             self.obterControlador().rodarComando('gerar regras', (self.obterRegra(),))
             self.fecharGif()
+            self.close()
 
 
 
