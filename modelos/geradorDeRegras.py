@@ -32,7 +32,7 @@ class GeradorDeRegras:
         return self.iface
 
     def gerarRegras(self, tipo):
-        'Metodo que pega os dados da tabela layer_rules do banco de dados e cria uma estrutura de  dicionario de todas as regras'
+        'Metodo que pega os dados da tabela layer_rules do banco de dados e cria uma estrutura de  dicionariocom todas as regras'
         tabela = self.obterBancoDeDados().obterTabelaDeRegras(tipo)
         regras = { 'atributo' : {}, 'linha' : {}}
         for linha in tabela:
@@ -47,7 +47,7 @@ class GeradorDeRegras:
             elif(valoresDeRegra['camada'] in regras['atributo'].keys()) and (valoresDeRegra['atributo'] in regras['atributo'][valoresDeRegra['camada']].keys()):
                 regras['atributo'][valoresDeRegra['camada']][valoresDeRegra['atributo']].append(regra)
             elif(valoresDeRegra['camada'] in regras['atributo'].keys()) and (not valoresDeRegra['atributo'] in regras['atributo'][valoresDeRegra['camada']].keys()):
-                regras['atributo'][valoresDeRegra['camada']] = {valoresDeRegra['atributo'] : [regra]}
+                regras['atributo'][valoresDeRegra['camada']][valoresDeRegra['atributo']] = [regra]
         self.configurarRegrasEmCamadas(regras)
 
     def organizarValoresDeRegra(self, linha):
@@ -82,7 +82,7 @@ class GeradorDeRegras:
             for camadaNome in regras[tipo]:
                 camadasMap = QgsMapLayerRegistry.instance().mapLayersByName(camadaNome)
                 for camadaMap in camadasMap:
-                    if tipo == 'atributo':
+                    if tipo.lower() == 'atributo':
                         for atributo in regras[tipo][camadaNome]:
                             camadaMap.conditionalStyles().setFieldStyles( atributo, regras[tipo][camadaNome][atributo] )
                     else:

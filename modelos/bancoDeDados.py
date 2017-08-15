@@ -63,7 +63,7 @@ class BancoDeDados(QtCore.QObject):
     def obterTabelaDeRegras(self, tipo):
         try:
             if (tipo[0].lower() == u'aquisicao') or (tipo[0].lower() == u'aquisição'):
-                self.obterConexaoPostgres().execute("""select * from public.layer_rules where tipo_estilo = 'aquisicao';""")
+                self.obterConexaoPostgres().execute("""select * from public.layer_rules where lower(tipo_estilo) in ('aquisicao', 'aquisição');""")
             elif (tipo[0].lower() == u'reambulacao') or (tipo[0].lower() == u'reambulação'):
                 self.obterConexaoPostgres().execute("""select * from public.layer_rules ;""")
         except:
